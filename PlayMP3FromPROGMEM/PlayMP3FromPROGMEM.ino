@@ -51,7 +51,7 @@ void setup()
   WiFi.mode(WIFI_OFF);
   Serial.begin(115200);
   delay(10);
-  SPIFFS.begin();
+  // SPIFFS.begin();
   Serial.printf("Sample MP3 playback begins...\n");
 
   audioLogger = &Serial;
@@ -59,7 +59,8 @@ void setup()
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
   out = new AudioOutputI2S();
-  out->SetGain(0.03);
+  out->SetPinout(26, 25, 27); // my board
+  out->SetGain(0.08);
   mp3 = new AudioGeneratorMP3();
   mp3->begin(id3, out);
 }
@@ -67,7 +68,7 @@ void setup()
 static uint32_t a;
 void loop() {
   if (mp3->isRunning()) {
-    a++;
+    // a++;
     if (!mp3->loop()) mp3->stop();
     // Serial.printf("a=%d\n", a);
   } else {
