@@ -1,7 +1,55 @@
 
 #include "my_i2s.h"
 
+//浮点数乘以2，有0判断    //float== 1符号位+8阶码+23尾数
+__inline float xmul2f(float d) {
+  union {
+    float floatval;
+    int intval;
+  } uflint;
+  uflint.floatval = d;
+  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
+    uflint.intval += 1 << 23; // add 1 to the exponent  //先移位再相加，阶码的最小位为第23位，阶码+1相当于乘2
+  }
+  return uflint.floatval;
+}
+//浮点数除以2，有0判断
+__inline float xdiv2f(float d) {
+  union {
+    float floatval;
+    int intval;
+  } uflint;
+  uflint.floatval = d;
+  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
+    uflint.intval -= 1 << 23; // sub 1 from the exponent  //先移位再相减，阶码-1相当于除以2
+  }
+  return uflint.floatval;
+}
+//浮点数除以任意整数n，有0判断
+__inline float xdivf(float d, int n) {
+  union {
+    float floatval;
+    int intval;
+  } uflint;
+  uflint.floatval = d;
+  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
+    uflint.intval -= n << 23; // add n to the exponent
+  }
+  return uflint.floatval;
+}
 
+//双精度浮点数除以2，有0判断
+__inline double xdiv2d(double d) {
+  union {
+    double doubleval;
+    int64_t intval;
+  } uflint;
+  uflint.doubleval = d;
+  if (uflint.intval & 0x7FFFFFFFFFFFFFFF) { // if f==0 do nothing
+    uflint.intval -= 1 << 52; // sub 1 from the exponent  //先移位再相减，阶码-1相当于除以2
+  }
+  return uflint.doubleval;
+}
 
 /*
   const uint16_t i2s_sine_wave_800hz[SINE_800HZ_SAMPLES_NUM] = {
@@ -24,17 +72,17 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Hello!");
 
-  init_all_tones();
+  SetGain(1);
+
   if (!prepare_i2s()) {
     Serial.println("Failed to initialize i2s");
     while (true);
   }
-
-  SetGain(0.02);
 }
 
 void loop() {
-  play_sound();
+  init_all_tones();
+  // play_sound();
   //delay(10);
 }
 
@@ -54,11 +102,29 @@ inline int16_t Amplify(int16_t s) {
   else return (int16_t)(v & 0xffff);
 }
 
+static uint16_t cache;
+
+static void test_side_effect() {
+}
+
 static bool init_all_tones() {
-  auto freq = C5;
-  for (int i = 0; i < 100; i++) {
-    auto v = sin(PI);
-    Serial.printf("\n");
+  auto freq = NOTE_C5; // 523.25
+  // freq = 1;
+  auto sample_rate = 44100;
+
+  auto count = (int)(sample_rate / freq);
+  Serial.printf("count: %d ", count);
+  auto start = micros();
+  for (int i = 0; i < count; i++) {
+    int16_t value = (int16_t)(sin(2 * PI / count * i) * 32767);
+    int16_t v = Amplify(value);
+    cache = v;
+    Serial.printf("%d\n", value);
+  }
+  auto cost = micros() - start;
+  // Serial.printf("cost: %d micros, cost@44100Hz=%fs\n", cost, cost * 44100.0 / count / 1000000.0);
+  if (cache == 0) {
+    Serial.println();
   }
 }
 
