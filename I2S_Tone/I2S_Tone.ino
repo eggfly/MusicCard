@@ -81,7 +81,8 @@ void setup() {
 }
 
 void loop() {
-  init_all_tones();
+  // init_all_tones();
+  play_samples_forever();
   // play_sound();
   //delay(10);
 }
@@ -104,29 +105,74 @@ inline int16_t Amplify(int16_t s) {
 
 static uint16_t cache;
 
-static void test_side_effect() {
-}
-
 static bool init_all_tones() {
-  auto freq = NOTE_C5; // 523.25
-  // freq = 1;
-  auto sample_rate = 44100;
+  auto freq = NOTE_A5; // 523.25
+  auto sample_rate = 22050.0;
 
   auto count = (int)(sample_rate / freq);
-  Serial.printf("count: %d ", count);
   auto start = micros();
-  for (int i = 0; i < count; i++) {
-    int16_t value = (int16_t)(sin(2 * PI / count * i) * 32767);
+  auto delta_x = 2 * PI / count;
+  for (long i = 0; i < count; i++) {
+    int16_t value = (int16_t)(sin(delta_x * i) * 32767);
     int16_t v = Amplify(value);
     cache = v;
-    Serial.printf("%d\n", value);
+    // Serial.printf("%d\n", value);
   }
   auto cost = micros() - start;
-  // Serial.printf("cost: %d micros, cost@44100Hz=%fs\n", cost, cost * 44100.0 / count / 1000000.0);
+  Serial.printf("count: %d, cost: %d micros, cost@%fHz=%f s\n", count, cost, sample_rate, cost * sample_rate / count / 1000000.0);
   if (cache == 0) {
     Serial.println();
   }
 }
+
+
+static long sample_time = 0;
+
+static bool play_samples_forever() {
+  auto start = millis();
+  uint32_t i = 0;
+
+  auto sample_rate = 22050.0;
+
+  auto freq1 = NOTE_C5;
+  auto freq2 = NOTE_E5;
+  auto freq3 = NOTE_G5;
+  auto freq4 = NOTE_C6;
+  auto count1 = (int)(sample_rate / freq1);
+  auto count2 = (int)(sample_rate / freq2);
+  auto count3 = (int)(sample_rate / freq3);
+  auto count4 = (int)(sample_rate / freq4);
+
+  while (1) {
+    auto now = millis();
+    if (now - start >= 1000) {
+      // Serial.printf("second!\n");
+    }
+    int16_t sample = 0;
+    int16_t value1 = (int16_t)(sin(2 * PI / count1 * i) * 8191);
+    int16_t value2 = (int16_t)(sin(2 * PI / count2 * i) * 8191);
+    int16_t value3 = (int16_t)(sin(2 * PI / count3 * i) * 8191);
+    sample += value1;
+    sample += value2;
+    sample += value3;
+    Serial.printf("%d\n", sample);
+    i++;
+  }
+  static uint8_t sin_samples[SINE_800HZ_SAMPLES_NUM * 2];
+  for (uint32_t i = 0; i < SINE_800HZ_SAMPLES_NUM; i++) {
+    int16_t * p_sample16 = (int16_t*)&sin_samples[i * 2];
+    *p_sample16 = Amplify(i2s_sine_wave_800hz[i]);
+    // sin_samples[i * 2] = ((i2s_sine_wave_800hz[i]) >> 3) & 0xFF;
+    // sin_samples[i * 2 + 1] = (i2s_sine_wave_800hz[i] >> 11) & 0xFF;
+  }
+
+  if (i2s_write_bytes(I2S_PORT_NO, (const char*)sin_samples, SINE_800HZ_SAMPLES_NUM * 2, portMAX_DELAY)
+      != SINE_800HZ_SAMPLES_NUM * 2) {
+    return false;
+  }
+  return true;
+}
+
 
 static bool play_sound() {
   static uint8_t sin_samples[SINE_800HZ_SAMPLES_NUM * 2];
