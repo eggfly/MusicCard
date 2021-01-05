@@ -1,55 +1,6 @@
 
 #include "my_i2s.h"
-
-//浮点数乘以2，有0判断    //float== 1符号位+8阶码+23尾数
-__inline float xmul2f(float d) {
-  union {
-    float floatval;
-    int intval;
-  } uflint;
-  uflint.floatval = d;
-  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
-    uflint.intval += 1 << 23; // add 1 to the exponent  //先移位再相加，阶码的最小位为第23位，阶码+1相当于乘2
-  }
-  return uflint.floatval;
-}
-//浮点数除以2，有0判断
-__inline float xdiv2f(float d) {
-  union {
-    float floatval;
-    int intval;
-  } uflint;
-  uflint.floatval = d;
-  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
-    uflint.intval -= 1 << 23; // sub 1 from the exponent  //先移位再相减，阶码-1相当于除以2
-  }
-  return uflint.floatval;
-}
-//浮点数除以任意整数n，有0判断
-__inline float xdivf(float d, int n) {
-  union {
-    float floatval;
-    int intval;
-  } uflint;
-  uflint.floatval = d;
-  if (uflint.intval & 0x7FFFFFFF) { // if f==0 do nothing
-    uflint.intval -= n << 23; // add n to the exponent
-  }
-  return uflint.floatval;
-}
-
-//双精度浮点数除以2，有0判断
-__inline double xdiv2d(double d) {
-  union {
-    double doubleval;
-    int64_t intval;
-  } uflint;
-  uflint.doubleval = d;
-  if (uflint.intval & 0x7FFFFFFFFFFFFFFF) { // if f==0 do nothing
-    uflint.intval -= 1 << 52; // sub 1 from the exponent  //先移位再相减，阶码-1相当于除以2
-  }
-  return uflint.doubleval;
-}
+#include "utils.h"
 
 /*
   const uint16_t i2s_sine_wave_800hz[SINE_800HZ_SAMPLES_NUM] = {
@@ -66,13 +17,12 @@ const int16_t i2s_sine_wave_800hz[SINE_800HZ_SAMPLES_NUM] = {
 static bool prepare_i2s();
 static bool play_sound();
 
-static bool init_all_tones();
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Hello!");
 
-  SetGain(1);
+  SetGain(0.05);
 
   if (!prepare_i2s()) {
     Serial.println("Failed to initialize i2s");
@@ -87,52 +37,19 @@ void loop() {
   //delay(10);
 }
 
-uint8_t gainF2P6; // Fixed point 2.6
-
-bool SetGain(float f) {
-  if (f > 4.0) f = 4.0;
-  if (f < 0.0) f = 0.0;
-  gainF2P6 = (uint8_t)(f * (1 << 6));
-  return true;
-}
-
-inline int16_t Amplify(int16_t s) {
-  int32_t v = (s * gainF2P6) >> 6;
-  if (v < -32767) return -32767;
-  else if (v > 32767) return 32767;
-  else return (int16_t)(v & 0xffff);
-}
-
-static uint16_t cache;
-
-static bool init_all_tones() {
-  auto freq = NOTE_A5; // 523.25
-  auto sample_rate = 22050.0;
-
-  auto count = (int)(sample_rate / freq);
-  auto start = micros();
-  auto delta_x = 2 * PI / count;
-  for (long i = 0; i < count; i++) {
-    int16_t value = (int16_t)(sin(delta_x * i) * 32767);
-    int16_t v = Amplify(value);
-    cache = v;
-    // Serial.printf("%d\n", value);
-  }
-  auto cost = micros() - start;
-  Serial.printf("count: %d, cost: %d micros, cost@%fHz=%f s\n", count, cost, sample_rate, cost * sample_rate / count / 1000000.0);
-  if (cache == 0) {
-    Serial.println();
-  }
-}
-
-
 static long sample_time = 0;
+
+#define sine_wave(count, i) \
+  ((int16_t)(sin(2 * PI / count * i) * 8191));
+
+#define square_wave(count, i) \
+  ((int16_t) (i % count > count / 2 ? 4095 : 0));
 
 static bool play_samples_forever() {
   auto start = millis();
   uint32_t i = 0;
 
-  auto sample_rate = 22050.0;
+  auto sample_rate = (double)I2S_SAMPLE_RATE;
 
   auto freq1 = NOTE_C5;
   auto freq2 = NOTE_E5;
@@ -142,20 +59,58 @@ static bool play_samples_forever() {
   auto count2 = (int)(sample_rate / freq2);
   auto count3 = (int)(sample_rate / freq3);
   auto count4 = (int)(sample_rate / freq4);
-
+  int mode = 0;
   while (1) {
     auto now = millis();
     if (now - start >= 1000) {
-      // Serial.printf("second!\n");
+      start = now;
+      Serial.printf("1 second! %d\n", i);
+      mode++;
+      mode %= 4;
+      if (mode == 0) {
+        Serial.printf("哆\n");
+      } else if (mode == 1) {
+        Serial.printf("哆+咪(和声)\n");
+      } else if (mode == 2) {
+        Serial.printf("哆+咪+搜(和声)\n");
+      } else if (mode == 3) {
+        Serial.printf("哆+咪+搜+高音哆(和声)\n");
+      }
     }
     int16_t sample = 0;
-    int16_t value1 = (int16_t)(sin(2 * PI / count1 * i) * 8191);
-    int16_t value2 = (int16_t)(sin(2 * PI / count2 * i) * 8191);
-    int16_t value3 = (int16_t)(sin(2 * PI / count3 * i) * 8191);
-    sample += value1;
-    sample += value2;
-    sample += value3;
-    Serial.printf("%d\n", sample);
+    int16_t value1 = square_wave(count1, i);
+    int16_t value2 = square_wave(count2, i);
+    int16_t value3 = square_wave(count3, i);
+    int16_t value4 = square_wave(count4, i);
+    if (mode == 0) {
+      sample += value1;
+    } else if (mode == 1) {
+      sample += value1;
+      sample += value2;
+    } else if (mode == 2) {
+      sample += value1;
+      sample += value2;
+      sample += value3;
+    } else if (mode == 3) {
+      sample += value1;
+      sample += value2;
+      sample += value3;
+      sample += value4;
+    }
+    // sample += value4;
+    sample = Amplify(sample);
+    // Serial.printf("%d\n", sample);
+    size_t bytes_written;
+    if (i2s_write(I2S_PORT_NO, (const char*)&sample, sizeof(sample) , &bytes_written, portMAX_DELAY) != ESP_OK) {
+      Serial.printf("!=%d, return.\n", sizeof(sample));
+      return false;
+    }
+
+    //    if (i2s_write_bytes(I2S_PORT_NO, (const char*)&sample, sizeof(sample) , portMAX_DELAY)
+    //        != sizeof(sample)) {
+    //      Serial.printf("!=%d, return.\n", sizeof(sample));
+    //      return false;
+    //    }
     i++;
   }
   static uint8_t sin_samples[SINE_800HZ_SAMPLES_NUM * 2];

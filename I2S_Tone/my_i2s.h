@@ -9,7 +9,7 @@
 #define  DAC_CHANNEL            DAC_CHANNEL_1                   // GPIO25 channel
 
 #define I2S_PORT_NO                I2S_NUM_0
-#define I2S_SAMPLE_RATE         8000
+#define I2S_SAMPLE_RATE         16000
 #define I2S_BITS_PER_SAMPLE     I2S_BITS_PER_SAMPLE_16BIT
 #define I2S_CHANNELS_NUM        I2S_CHANNEL_MONO
 #define I2S_CHANNEL_FORMAT      I2S_CHANNEL_FMT_ONLY_RIGHT
@@ -18,27 +18,6 @@
 #define SINE_SAMPLES_NUM            256
 #define SINE_800HZ_SAMPLES_NUM      10
 
-
-#define NOTE_B4 493.88
-#define NOTE_C5 523.25
-#define NOTE_CS5 554.37
-#define NOTE_D5 587.33
-#define NOTE_DS5 622.25
-#define NOTE_E5 659.26
-#define NOTE_F5 698.46
-#define NOTE_FS5 739.99
-#define NOTE_G5 783.99
-#define NOTE_GS5 830.61
-#define NOTE_A5 880
-#define NOTE_AS5 932.33
-#define NOTE_B5 987.77
-
-
-#define NOTE_C6 1047
-
-#define NOTE_DS8 4978
-
-/*
 
 #define NOTE_B0 31
 #define NOTE_C1 33
@@ -88,19 +67,22 @@
 #define NOTE_GS4 415
 #define NOTE_A4 440
 #define NOTE_AS4 466
-#define NOTE_B4 494
-#define NOTE_C5 523
-#define NOTE_CS5 554
-#define NOTE_D5 587
-#define NOTE_DS5 622
-#define NOTE_E5 659
-#define NOTE_F5 698
-#define NOTE_FS5 740
-#define NOTE_G5 784
-#define NOTE_GS5 831
+
+#define NOTE_B4 493.88
+#define NOTE_C5 523.25
+#define NOTE_CS5 554.37
+#define NOTE_D5 587.33
+#define NOTE_DS5 622.25
+#define NOTE_E5 659.26
+#define NOTE_F5 698.46
+#define NOTE_FS5 739.99
+#define NOTE_G5 783.99
+#define NOTE_GS5 830.61
 #define NOTE_A5 880
-#define NOTE_AS5 932
-#define NOTE_B5 988
+#define NOTE_AS5 932.33
+#define NOTE_B5 987.77
+
+
 #define NOTE_C6 1047
 #define NOTE_CS6 1109
 #define NOTE_D6 1175
@@ -129,7 +111,7 @@
 #define NOTE_CS8 4435
 #define NOTE_D8 4699
 #define NOTE_DS8 4978
-*/
+
 const i2s_config_t i2s_config = {
   .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
   .sample_rate =  I2S_SAMPLE_RATE,
